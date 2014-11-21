@@ -1,0 +1,435 @@
+SetupGame()
+StartGame()
+
+Sub SetupGame
+  MaxScore = 25
+  None = 0
+  Knight = 1
+  Castle = 3
+  Rock = 5
+  Tree = 6
+  Horn = 7
+  Gold = 8
+  StartX[0] =  1
+  StartY[0] =  1
+  StartX[1] = 18
+  StartY[1] = 12
+  RockCount = 40
+  TreeCount = 40
+  TileSizeX = 32
+  TileSizeY = 32
+  MaxCellsX = 20
+  MaxCellsY = 14
+  CellCount = MaxCellsX * MaxCellsY
+  MoveU[0] = "W"
+  MoveL[0] = "A"
+  MoveD[0] = "S"
+  MoveR[0] = "D"
+  MoveL[1] = "Left"
+  MoveU[1] = "Up"
+  MoveD[1] = "Down"
+  MoveR[1] = "Right"
+  GraphicsWindow.Title = "Knight Trove"
+  GraphicsWindow.CanResize = "False"
+  GraphicsWindow.Width = 640
+  GraphicsWindow.Height = 480
+  GraphicsWindow.Show()
+  GraphicsWindow.FontName = "MonoType Corsiva"
+  GraphicsWindow.FontSize = 32
+  GraphicsWindow.BrushColor = "LightSteelBlue"
+  GraphicsWindow.DrawText(8, 8, "Loading. Please Wait...")
+  ShowInput()
+  contentLocation = Program.Directory + "\Content\"
+  Images[Knight + 0] = ImageList.LoadImage(contentLocation + "Knight1.png")
+  Images[Knight + 1] = ImageList.LoadImage(contentLocation + "Knight2.png")
+  Images[Castle + 0] = ImageList.LoadImage(contentLocation + "Castle1.png")
+  Images[Castle + 1] = ImageList.LoadImage(contentLocation + "Castle2.png")
+  Images[Rock] = ImageList.LoadImage(contentLocation + "Rock.png")
+  Images[Tree] = ImageList.LoadImage(contentLocation + "Tree.png")
+  Images[Horn] = ImageList.LoadImage(contentLocation + "Horn.png")
+  Images[Gold] = ImageList.LoadImage(contentLocation + "Gold.png")
+  Program.Delay(2000)
+  GraphicsWindow.Clear()
+  ShowInput()
+  GraphicsWindow.FontSize = 32
+  GraphicsWindow.BrushColor = "LightSteelBlue"
+  GraphicsWindow.DrawText(8, 8, "Press F1 To Start")
+  LastKey = GraphicsWindow.LastKey
+  While LastKey <> "F1"
+    Program.Delay(500)
+    LastKey = GraphicsWindow.LastKey    
+  EndWhile
+EndSub
+
+Sub ShowInput
+  GraphicsWindow.FontSize = 16
+  GraphicsWindow.BrushColor = "Blue"
+  GraphicsWindow.DrawText(  8, 80, "Player 1")
+  GraphicsWindow.DrawText(  8, 80 + 2 * 16, "W - MOVE UP")
+  GraphicsWindow.DrawText(  8, 80 + 3 * 16, "A - MOVE LEFT")
+  GraphicsWindow.DrawText(  8, 80 + 4 * 16, "S - MOVE DOWN")
+  GraphicsWindow.DrawText(  8, 80 + 5 * 16, "D - MOVE RIGHT")
+  GraphicsWindow.BrushColor = "Red"
+  GraphicsWindow.DrawText(328, 80, "Player 2")
+  GraphicsWindow.DrawText(328, 80 + 2 * 16, "UP    - MOVE UP")
+  GraphicsWindow.DrawText(328, 80 + 3 * 16, "LEFT  - MOVE LEFT")
+  GraphicsWindow.DrawText(328, 80 + 4 * 16, "DOWN  - MOVE DOWN")
+  GraphicsWindow.DrawText(328, 80 + 5 * 16, "RIGHT - MOVE RIGHT")
+EndSub
+
+Sub StartGame
+  GraphicsWindow.Clear()
+  GraphicsWindow.PenWidth = 1
+  GraphicsWindow.BackgroundColor = "DarkOliveGreen"
+  GraphicsWindow.PenColor = "Black"
+  GraphicsWindow.BrushColor = "DarkBlue"
+  GraphicsWindow.FillRectangle(  0, 0, 320, 32)
+  GraphicsWindow.DrawRectangle(  0, 0, 320, 32)
+  GraphicsWindow.PenColor = "Black"
+  GraphicsWindow.BrushColor = "DarkRed"
+  GraphicsWindow.FillRectangle(320, 0, 320, 32)
+  GraphicsWindow.DrawRectangle(320, 0, 320, 32)
+  GraphicsWindow.DrawImage(Images[Castle + 0],   0, 0)
+  GraphicsWindow.DrawImage(Images[Castle + 1], 320, 0)
+  GraphicsWindow.DrawImage(Images[Gold], 214, 0)
+  GraphicsWindow.DrawImage(Images[Gold], 534, 0)
+  GraphicsWindow.DrawImage(Images[Horn], 246, 0)
+  GraphicsWindow.DrawImage(Images[Horn], 566, 0)
+  GraphicsWindow.FontSize = 20
+  GraphicsWindow.FontName = "Verdana"
+  GraphicsWindow.BrushColor = "White"
+  ScoreText[0] = Shapes.AddText(MaxScore)
+  ScoreText[1] = Shapes.AddText(MaxScore)
+  StateText[0] = Shapes.AddText("0-0")
+  StateText[1] = Shapes.AddText("0-0")
+  Shapes.Move(ScoreText[0],  32, 3)
+  Shapes.Move(ScoreText[1], 352, 3)
+  Shapes.Move(StateText[0], 278, 3)
+  Shapes.Move(StateText[1], 598, 3)
+  CreateMap()
+  CreatePlayers()
+  Timer.Interval = 1000
+  Timer.Tick = CreateItem
+  GraphicsWindow.KeyDown = UpdatePlayers
+EndSub
+
+Sub CreateMap
+  For CellIndex = 0 To CellCount - 1
+    MapIndex[CellIndex] = None
+  EndFor
+  CreateCastles()
+  CreateRocks()
+  CreateTrees()
+EndSub
+
+Sub AddObject
+  S = Shapes.AddImage(Images[T])
+  Shapes.Move(S, X * TileSizeX, Y * TileSizeY + TileSizeY)
+  CellIndex = Y * MaxCellsX + X
+  MapIndex[CellIndex] = T
+  MapShape[CellIndex] = S
+EndSub
+
+Sub GetRandomPosition
+  Repeat:
+  X = Math.GetRandomNumber(MaxCellsX - 2)
+  Y = Math.GetRandomNumber(MaxCellsY - 2)
+  CellIndex = Y * MaxCellsX + X
+  If MapIndex[CellIndex] <> None Then
+    Goto Repeat
+  EndIf
+  Distance1 = Math.Abs(StartX[0] - X) + Math.Abs(StartY[0] - Y)
+  Distance2 = Math.Abs(StartX[1] - X) + Math.Abs(StartY[1] - Y)
+  If Distance1 < 4 Or Distance2 < 4 Then
+    Goto Repeat
+  EndIf
+EndSub
+
+Sub CreateCastles
+  T = Castle + 0
+  X = StartX[0]
+  Y = StartY[0]
+  AddObject()
+  Sound.PlayChimesAndWait()
+  T = Castle + 1
+  X = StartX[1]
+  Y = StartY[1]
+  AddObject()
+  Sound.PlayChimesAndWait()
+EndSub
+
+Sub CreateRocks
+  T = Rock
+  For I = 1 To RockCount
+    GetRandomPosition()
+    AddObject()
+  EndFor
+  Sound.PlayChimesAndWait()
+EndSub
+
+Sub CreateTrees
+  T = Tree
+  For I = 1 To TreeCount
+    GetRandomPosition()
+    AddObject()
+  EndFor
+  Sound.PlayChimesAndWait()
+EndSub
+
+Sub MovePlayers
+  PX1=PlayerX[0] * TileSizeX
+  PX2=PlayerX[1] * TileSizeX
+  PY1=PlayerY[0] * TileSizeY + TileSizeY
+  PY2=PlayerY[1] * TileSizeY + TileSizeY
+  Shapes.Move(PlayerS[0], PX1, PY1)
+  Shapes.Move(PlayerS[1], PX2, PY2)
+  Shapes.Move(Status[0], PX1, PY1 - 10)
+  Shapes.Move(Status[1], PX2, PY2 - 10)
+  G1 = Golds[0]
+  G2 = Golds[1]
+  H1 = Horns[0]
+  H2 = Horns[1]
+  T1 = ""
+  T2 = ""
+  If H1 = H2 Then
+    If G1 = 0 Then
+      T1 = "Find"
+    EndIf
+    If G2 = 0 Then
+      T2 = "Find"
+    EndIf
+    If G1 = 5 Then
+      T1 = "Home"
+    Endif
+    If G2 = 5 Then
+      T2 = "Home"
+    EndIf
+    If G1 > 0 And G1 < 5 Then
+      T1 = "Find/Home"
+    EndIf
+    If G2 > 0 And G2 < 5 Then
+      T2 = "Find/Home"
+    EndIf
+   Endif
+    If H1 > H2 Then
+      If G2 = 0 Then
+        T1 = "Chase"
+        T2 = "Avoid"
+        If G1 > 0 Then
+          T1 = "Chase/Home"
+         EndIf
+      EndIf
+      If G2 > 0 Then
+        T1 = "Steal!"
+        T2 = "Run Home!"
+      EndIf
+      Endif
+    If H2 > H1 Then
+      If G1 = 0 Then
+        T1 = "Avoid"
+        T2 = "Chase"
+        If G2 > 0 Then
+          T2 = "Chase/Home"
+        EndIf
+      EndIf
+      If G1 > 0 Then
+        T1 = "Run Home!"
+        T2 = "Steal!"
+      EndIf
+    EndIf
+    Shapes.SetText(Status[0],T1)
+    Shapes.SetText(Status[1],T2)
+EndSub
+
+Sub CreatePlayers
+  Score[0] = 0
+  Horns[0] = 0
+  Golds[0] = 0
+  Score[1] = 0
+  Horns[1] = 0
+  Golds[1] = 0
+  PlayerX[0] = StartX[0]
+  PlayerY[0] = StartY[0]
+  PlayerX[1] = StartX[1]
+  PlayerY[1] = StartY[1]
+ 
+  GraphicsWindow.FontName="Arial"
+  GraphicsWindow.FontSize=9
+  GraphicsWindow.BrushColor="White"
+  PlayerS[0] = Shapes.AddImage(Images[Knight + 0])
+  PlayerS[1] = Shapes.AddImage(Images[Knight + 1])
+  Status[0] = Shapes.AddText("")
+  Status[1] = Shapes.AddText("")
+  MovePlayers()
+  Sound.PlayChimesAndWait()
+EndSub
+
+Sub UpdatePlayers
+  key = GraphicsWindow.LastKey
+  For PlayerIndex = 0 To 1
+    PX = PlayerX[PlayerIndex]
+    PY = PlayerY[PlayerIndex]
+    OX = PX
+    OY = PY
+    If key = MoveU[PlayerIndex] Then
+      PY = PY - 1
+    EndIf
+    If key = MoveD[PlayerIndex] Then
+      PY = PY + 1
+    EndIf
+    If key = MoveL[PlayerIndex] Then
+      PX = PX - 1
+    EndIf    
+    If key = MoveR[PlayerIndex] Then
+      PX = PX + 1
+    EndIf
+    If PX < 0 Then
+      PX = MaxCellsX - 1
+    EndIf
+    If PY < 0 Then
+      PY = MaxCellsY - 1
+    EndIf  
+    If PX = MaxCellsX Then
+      PX = 0
+    EndIf
+    If PY = MaxCellsY Then
+      PY = 0
+    EndIf
+    CellIndex = PY * MaxCellsX + PX
+    ItemIndex = MapIndex[CellIndex]
+    If ItemIndex <> 0 Then
+      If ItemIndex = Castle + PlayerIndex And Golds[PlayerIndex] > 0 Then
+        Score[PlayerIndex] = Score[PlayerIndex] + Golds[PlayerIndex]
+        Golds[PlayerIndex] = 0
+        Sound.PlayChime()
+      ElseIf ItemIndex = Tree And Horns[PlayerIndex] > 0 Then
+        Horns[PlayerIndex] = Horns[PlayerIndex] - 1
+        Shapes.Remove(MapShape[CellIndex])
+        MapIndex[CellIndex] = None
+        Sound.PlayClick()
+      ElseIf ItemIndex = Gold And Golds[PlayerIndex] < 5 Then
+        Golds[PlayerIndex] = Golds[PlayerIndex] + 1
+        H = 5 - Golds[PlayerIndex]
+        If Horns[PlayerIndex] > H Then
+          Horns[PlayerIndex] = H
+        EndIf
+        Shapes.Remove(MapShape[CellIndex])
+        MapIndex[CellIndex] = None
+        Sound.PlayClick()
+      ElseIf ItemIndex = Horn And Horns[PlayerIndex] + Golds[PlayerIndex] < 5 Then
+        Horns[PlayerIndex] = Horns[PlayerIndex] + 1
+        Shapes.Remove(MapShape[CellIndex])
+        MapIndex[CellIndex] = None
+        Sound.PlayClick()
+      Else
+        PX = OX
+        PY = OY
+      EndIf
+    EndIf
+    PlayerX[PlayerIndex] = PX
+    PlayerY[PlayerIndex] = PY
+  EndFor
+  If PlayerX[0] = PlayerX[1] And PlayerY[0] = PlayerY[1] Then
+    If Horns[0] = Horns[1] Then
+      PlayerX[0] = StartX[0]
+      PlayerY[0] = StartY[0]
+      PlayerX[1] = StartX[1]
+      PlayerY[1] = StartY[1]
+      Score[0] = Score[0] + Golds[0]
+      Score[1] = Score[1] + Golds[1]
+      Golds[0] = 0
+      Horns[0] = 0
+      Golds[1] = 0
+      Horns[1] = 0
+    ElseIf Horns[0] > Horns[1] Then
+      PlayerX[1] = StartX[1]
+      PlayerY[1] = StartY[1]
+      Golds[0] = Golds[0] + Golds[1]
+      Horns[0] = Horns[0] - 1
+      Golds[1] = 0
+      If Golds[0] > 5 Then
+        Golds[0] = 5
+      EndIf
+      H = 5 - Golds[0]
+      If Horns[0] > H Then
+        Horns[0] = H
+      EndIf
+    ElseIf Horns[1] > Horns[0] Then
+      PlayerX[0] = StartX[0]
+      PlayerY[0] = StartY[0]
+      Golds[1] = Golds[1] + Golds[0]
+      Horns[1] = Horns[1] - 1
+      Golds[0] = 0
+      If Golds[1] > 5 Then
+        Golds[1] = 5
+      EndIf
+      H = 5 - Golds[1]
+      If Horns[1] > H Then
+        Horns[1] = H
+      EndIf
+    EndIf
+    Sound.PlayBellRing()
+  EndIf
+  MovePlayers()
+  Shapes.SetText(StateText[0], Golds[0] + "-" + Horns[0])
+  Shapes.SetText(StateText[1], Golds[1] + "-" + Horns[1])
+  Shapes.SetText(ScoreText[0], MaxScore - Score[0])
+  Shapes.SetText(ScoreText[1], MaxScore - Score[1])
+  Score0 = Score[0]
+  Score1 = Score[1]
+  If Score0 >= MaxScore Or Score1 >= MaxScore Then
+    Winner = 2
+    If Score0 > Score1 Then
+      Winner = 0
+    EndIf
+    If Score1 > Score0 Then
+      Winner = 1
+    EndIf
+    EndGame()
+  EndIf
+EndSub
+
+Sub CreateItem
+  V = Math.GetRandomNumber(10)
+  X = Math.GetRandomNumber(MaxCellsX - 2)
+  Y = Math.GetRandomNumber(MaxCellsY - 2)
+  CellIndex = Y * MaxCellsX + X
+  If MapIndex[CellIndex] = None Then
+    Distance1 = Math.Abs(PlayerX[0] - X) + Math.Abs(PlayerY[0] - Y)
+    Distance2 = Math.Abs(PlayerX[1] - X) + Math.Abs(PlayerY[1] - Y)
+    If Distance1 >= 4 And Distance2 >= 4 Then
+      If V < 4 Then
+        T = Horn
+        AddObject()
+      EndIf
+      If V > 8 Then
+        T = Gold
+        AddObject()
+      EndIf
+    EndIf
+  EndIf
+EndSub
+
+Sub EndGame
+  Timer.Pause()
+  GraphicsWindow.Clear()
+  GraphicsWindow.BackgroundColor = "Black"
+  GraphicsWindow.FontName = "Monotype Corsiva"
+  GraphicsWindow.FontSize = 48
+  If Winner = 0 Then
+    GraphicsWindow.BrushColor = "Blue"
+    GraphicsWindow.DrawText(156, 176, "Blue Player Wins!")
+    GraphicsWindow.DrawImage(Images[Knight + 0], 304, 240)
+  EndIf
+  If Winner = 1 Then
+    GraphicsWindow.BrushColor = "Red"
+    GraphicsWindow.DrawText(160, 176, "Red Player Wins!")
+    GraphicsWindow.DrawImage(Images[Knight + 1], 304, 240)
+  EndIf
+  If Winner = 2 Then
+    GraphicsWindow.BrushColor = "White"
+    GraphicsWindow.DrawText(208, 176, "Its a Draw!")
+    GraphicsWindow.DrawImage(Images[Knight + 0], 288, 240)
+    GraphicsWindow.DrawImage(Images[Knight + 1], 320, 240)
+  EndIf
+EndSub
